@@ -2,51 +2,226 @@
 <html lang="id">
 <head>
   <meta charset="UTF-8">
-  <title>Isi Buku Tamu</title>
+  <title>Buku Tamu Digital</title>
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.2/dist/css/bootstrap.min.css" rel="stylesheet">
+  <style>
+    /* Sedikit style tambahan agar lebih rapi */
+    body {
+      background-color: #f8f9fa;
+    }
+    .card {
+      border: none;
+    }
+    .table th {
+      white-space: nowrap;
+    }
+    .aksi-btn {
+      width: 80px;
+      margin-bottom: 5px;
+    }
+  </style>
 </head>
 <body class="bg-light">
 
-  <div class="container mt-5">
-    <div class="card shadow">
+  <div class="container my-5">
+    <div class="card shadow-sm">
       <div class="card-header bg-primary text-white">
-        <h4 class="mb-0">Form Buku Tamu</h4>
+        <h4 class="mb-0">📝 Form Buku Tamu</h4>
       </div>
       <div class="card-body">
-        <form action="simpan.php" method="post">
+        <form id="formBukuTamu">
+          <input type="hidden" id="editId">
           
-          <div class="mb-3">
-            <label class="form-label">Nama</label>
-            <input type="text" name="nama" class="form-control" placeholder="Masukkan nama anda" required>
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Nama</label>
+              <input type="text" id="nama" class="form-control" placeholder="Masukkan nama Anda" required>
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Hari & Tanggal</label>
+              <input type="date" id="tanggal" class="form-control" required>
+            </div>
           </div>
 
-          <div class="mb-3">
-            <label class="form-label">Hari & Tanggal</label>
-            <input type="date" name="tanggal" class="form-control" required>
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label">Jabatan</label>
-            <input type="text" name="jabatan" class="form-control" placeholder="Jabatan anda">
-          </div>
-
-          <div class="mb-3">
-            <label class="form-label">Alamat</label>
-            <input type="text" name="alamat" class="form-control" placeholder="Masukkan alamat anda">
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Jabatan</label>
+              <input type="text" id="jabatan" class="form-control" placeholder="Jabatan Anda">
+            </div>
+            <div class="col-md-6 mb-3">
+              <label class="form-label">Alamat</label>
+              <input type="text" id="alamat" class="form-control" placeholder="Masukkan alamat Anda">
+            </div>
           </div>
 
           <div class="mb-3">
             <label class="form-label">Maksud & Tujuan</label>
-            <textarea name="maksud_tujuan" class="form-control" rows="3" placeholder="Tuliskan maksud dan tujuan anda" required></textarea>
+            <textarea id="maksud_tujuan" class="form-control" rows="3" placeholder="Tuliskan maksud dan tujuan Anda" required></textarea>
           </div>
 
-          <button type="submit" class="btn btn-success">Simpan</button>
-          <a href="lihat.php" class="btn btn-secondary">Lihat Buku Tamu</a>
+          <button type="submit" class="btn btn-success">Simpan Data</button>
+          <button type="button" class="btn btn-secondary" id="btnBatal" style="display: none;">Batal Edit</button>
         </form>
+      </div>
+    </div>
+
+    <div class="card shadow-sm mt-5">
+      <div class="card-header bg-dark text-white">
+        <h4 class="mb-0">📊 Data Tamu</h4>
+      </div>
+      <div class="card-body">
+        <div class="table-responsive">
+          <table class="table table-striped table-hover">
+            <thead class="table-dark">
+              <tr>
+                <th>No</th>
+                <th>Nama</th>
+                <th>Tanggal</th>
+                <th>Jabatan</th>
+                <th>Alamat</th>
+                <th>Maksud & Tujuan</th>
+                <th>Aksi</th>
+              </tr>
+            </thead>
+            <tbody id="tabelData">
+              </tbody>
+          </table>
+        </div>
       </div>
     </div>
   </div>
 
+<script>
+// Menunggu sampai seluruh halaman HTML dimuat
+document.addEventListener('DOMContentLoaded', function() {
+
+  // Mengambil elemen-elemen penting dari DOM
+  const form = document.getElementById('formBukuTamu');
+  const tabelBody = document.getElementById('tabelData');
+  const btnBatal = document.getElementById('btnBatal');
+  
+  // Fungsi untuk mengambil data dari localStorage
+  const getTamu = () => {
+    // Jika ada data 'bukuTamu', ambil. Jika tidak, kembalikan array kosong.
+    return JSON.parse(localStorage.getItem('bukuTamu')) || [];
+  };
+
+  // Fungsi untuk menyimpan data ke localStorage
+  const simpanTamu = (data) => {
+    localStorage.setItem('bukuTamu', JSON.stringify(data));
+  };
+
+  // Fungsi untuk menampilkan data ke dalam tabel
+  const renderTabel = () => {
+    const dataTamu = getTamu();
+    tabelBody.innerHTML = ''; // Kosongkan tabel sebelum diisi data baru
+    
+    if (dataTamu.length === 0) {
+        tabelBody.innerHTML = '<tr><td colspan="7" class="text-center">Belum ada data tamu.</td></tr>';
+        return;
+    }
+
+    dataTamu.forEach((tamu, index) => {
+      const baris = `
+        <tr>
+          <td>${index + 1}</td>
+          <td>${tamu.nama}</td>
+          <td>${tamu.tanggal}</td>
+          <td>${tamu.jabatan}</td>
+          <td>${tamu.alamat}</td>
+          <td>${tamu.maksud_tujuan}</td>
+          <td>
+            <button class="btn btn-warning btn-sm d-block aksi-btn" onclick="editData('${tamu.id}')">Edit</button>
+            <button class="btn btn-danger btn-sm d-block aksi-btn" onclick="hapusData('${tamu.id}')">Hapus</button>
+          </td>
+        </tr>
+      `;
+      tabelBody.innerHTML += baris;
+    });
+  };
+
+  // Event listener untuk form submission
+  form.addEventListener('submit', function(e) {
+    e.preventDefault(); // Mencegah form mengirim data ke server
+
+    const idEdit = document.getElementById('editId').value;
+    const dataTamu = getTamu();
+
+    // Data dari input form
+    const tamuBaru = {
+      nama: document.getElementById('nama').value,
+      tanggal: document.getElementById('tanggal').value,
+      jabatan: document.getElementById('jabatan').value,
+      alamat: document.getElementById('alamat').value,
+      maksud_tujuan: document.getElementById('maksud_tujuan').value,
+    };
+
+    if (idEdit) {
+      // MODE EDIT: cari index data yang mau diupdate
+      const index = dataTamu.findIndex(tamu => tamu.id == idEdit);
+      if (index !== -1) {
+        // Gabungkan id lama dengan data baru
+        dataTamu[index] = { ...dataTamu[index], ...tamuBaru };
+      }
+    } else {
+      // MODE TAMBAH: tambahkan data baru ke array
+      tamuBaru.id = Date.now(); // Buat ID unik berdasarkan waktu
+      dataTamu.push(tamuBaru);
+    }
+
+    simpanTamu(dataTamu); // Simpan array terbaru ke localStorage
+    renderTabel(); // Tampilkan ulang data di tabel
+    resetForm(); // Kosongkan form
+  });
+
+  // Event listener untuk tombol Batal Edit
+  btnBatal.addEventListener('click', function() {
+    resetForm();
+  });
+
+  // Fungsi untuk mereset form ke keadaan awal
+  const resetForm = () => {
+    form.reset(); // Mengosongkan semua input
+    document.getElementById('editId').value = ''; // Hapus ID edit
+    document.querySelector('button[type="submit"]').textContent = 'Simpan Data'; // Kembalikan teks tombol
+    btnBatal.style.display = 'none'; // Sembunyikan tombol batal
+  };
+  
+  // Fungsi untuk menyiapkan data untuk diedit
+  window.editData = (id) => {
+    const dataTamu = getTamu();
+    const tamu = dataTamu.find(t => t.id == id);
+    if (tamu) {
+      document.getElementById('editId').value = tamu.id;
+      document.getElementById('nama').value = tamu.nama;
+      document.getElementById('tanggal').value = tamu.tanggal;
+      document.getElementById('jabatan').value = tamu.jabatan;
+      document.getElementById('alamat').value = tamu.alamat;
+      document.getElementById('maksud_tujuan').value = tamu.maksud_tujuan;
+      
+      document.querySelector('button[type="submit"]').textContent = 'Update Data';
+      btnBatal.style.display = 'inline-block';
+      window.scrollTo(0, 0); // Scroll ke atas halaman untuk fokus ke form
+    }
+  };
+
+  // Fungsi untuk menghapus data
+  window.hapusData = (id) => {
+    // Konfirmasi sebelum menghapus
+    if (confirm('Apakah Anda yakin ingin menghapus data ini?')) {
+      let dataTamu = getTamu();
+      // Filter data, kembalikan semua data KECUALI yang ID-nya cocok
+      dataTamu = dataTamu.filter(t => t.id != id);
+      simpanTamu(dataTamu);
+      renderTabel();
+      resetForm(); // Reset form jika data yang sedang diedit dihapus
+    }
+  };
+  
+  // Tampilkan data saat halaman pertama kali dimuat
+  renderTabel();
+});
+</script>
+
 </body>
 </html>
-
